@@ -1,6 +1,6 @@
 # web-file-viewer
 
-add harcode path to files want to display
+add harcode path to files want to display --- I think you can link this to docker -volume
 
 ~~add folder and file symbols.~~
 
