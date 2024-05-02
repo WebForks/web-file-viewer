@@ -14,6 +14,12 @@ make working search of files (display open that file path)
 
 make better gui
 
+add last accessed
+
+add size of file
+
+add ability to sort by name, last accessed, and size of file
+
 check if work with linux
 
 dockerize
