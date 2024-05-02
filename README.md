@@ -2,13 +2,13 @@
 
 add harcode path to files want to display
 
-add folder and file symbols.
+~~add folder and file symbols.~~
 
 add path on top
 
 add path that changes when user clicks into folder
 
-make folders clickable
+make folders clickable to go into subfolders
 
 make working search of files (display open that file path)
 
