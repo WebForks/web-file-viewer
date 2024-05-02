@@ -37,7 +37,7 @@ def search_files(directory, search_query):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    root_directory = request.form.get('directory', 'path/to/your/directory')
+    root_directory = request.form.get('directory', '/')
     search_query = request.form.get('search_query', '')
     if request.method == 'POST':
         directory_structure = get_directory_structure(root_directory)
