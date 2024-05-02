@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Directory Structure</title>
+</head>
+
+<body>
+    <h1>Directory Structure Viewer</h1>
+    <form action="/" method="post">
+        <input type="text" name="directory" value="{{ root_directory }}" placeholder="Enter directory path">
+        <input type="text" name="search_query" value="{{ search_query }}" placeholder="Search here">
+        <button type="submit">Refresh & Search</button>
+    </form>
+    {% if directory_structure %}
+    <ul>
+        {% for folder, subfolders in directory_structure.items() %}
+        <li>{{ folder }}
+            {% if subfolders %}
+            <ul>
+                {% for subfolder, files in subfolders.items() %}
+                <li>{{ subfolder }}
+                    {% if files %}
+                    <ul>
+                        {% for file in files %}
+                        <li>{{ file }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% if search_results %}
+    <h2>Search Results:</h2>
+    <ul>
+        {% for result in search_results %}
+        <li>{{ result }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</body>
+
+</html>
