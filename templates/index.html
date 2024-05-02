@@ -16,24 +16,32 @@
     </form>
     {% if directory_structure %}
     <ul>
-        {% for folder, subfolders in directory_structure.items() %}
-        <li>{{ folder }}
-            {% if subfolders %}
+        {% for item, contents in directory_structure.items() %}
+        {% if contents %} <!-- Check if the contents is not None or empty, suggesting it is a folder -->
+        <li>&#128193; {{ item }} <!-- Folder icon -->
             <ul>
-                {% for subfolder, files in subfolders.items() %}
-                <li>{{ subfolder }}
-                    {% if files %}
+                {% for subitem, subcontents in contents.items() %}
+                {% if subcontents %} <!-- Recursive check for subfolders -->
+                <li>&#128193; {{ subitem }} <!-- Folder icon -->
                     <ul>
-                        {% for file in files %}
-                        <li>{{ file }}</li>
+                        {% for file, dummy in subcontents.items() %}
+                        {% if dummy %} <!-- Further checking to differentiate files from folders -->
+                        <li>&#128193; {{ file }}</li> <!-- Folder icon for nested folders -->
+                        {% else %}
+                        <li>&#128196; {{ file }}</li> <!-- File icon -->
+                        {% endif %}
                         {% endfor %}
                     </ul>
-                    {% endif %}
                 </li>
+                {% else %}
+                <li>&#128196; {{ subitem }}</li> <!-- File icon -->
+                {% endif %}
                 {% endfor %}
             </ul>
-            {% endif %}
         </li>
+        {% else %}
+        <li>&#128196; {{ item }}</li> <!-- File icon -->
+        {% endif %}
         {% endfor %}
     </ul>
     {% endif %}
