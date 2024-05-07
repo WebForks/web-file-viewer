@@ -10,7 +10,7 @@ add harcode path to files want to display --- I think you can link this to docke
 
 ~~make folders clickable to go into subfolders~~
 
-~~make working search of files (display open that file path)~~
+make working search of files (display open that file path)
 
 make better gui
 
@@ -18,7 +18,7 @@ make better gui
 
 ~~add size of file~~
 
-~~add ability to sort by name, last accessed, and size of file~~
+add ability to sort by name, last accessed, and size of file
 
 check if work with linux
 
