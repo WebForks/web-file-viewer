@@ -4,7 +4,7 @@ import time
 
 app = Flask(__name__)
 # example gui https://alchemist.cyou
-
+# https://stackoverflow.com/questions/49770999/docker-env-for-python-variables
 base_directory = 'C:/Users/Ethan/Downloads'
 
 
