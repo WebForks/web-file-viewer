@@ -1,0 +1,43 @@
+/* Basic reset */
+body,
+html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: Arial, sans-serif; /* Ensures a consistent font across browsers */
+}
+
+/* Styling for the entire body */
+body {
+  display: flex;
+  flex-direction: column; /* Stacks items vertically */
+  justify-content: flex-start; /* Aligns content to the top */
+  align-items: center; /* Centers items horizontally */
+  height: 100vh; /* Full viewport height */
+}
+
+/* Styling for the header */
+header {
+  text-align: center; /* Centers the title */
+  width: 100%; /* Full width */
+  padding: 20px 0; /* Padding around the header */
+}
+
+/* Styling for forms */
+form {
+  margin: 20px 0; /* Space above and below the form */
+}
+
+/* Styling for unordered lists */
+ul {
+  text-align: left; /* Text aligned to the left */
+  list-style: none; /* No bullets for list items */
+  width: 100%; /* Full width */
+  max-width: 800px; /* Maximum width to avoid too wide lists */
+  padding: 0 20px; /* Padding for smaller screens */
+}
+
+li {
+  margin: 5px 0; /* Margin between list items */
+}

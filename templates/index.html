@@ -4,46 +4,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Directory Structure</title>
+    <title>Directory Structure Viewer</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 
 <body>
-    <h1>Directory Structure Viewer</h1>
-    <form action="/" method="post">
-        <input type="text" name="directory" value="{{ root_directory }}" placeholder="Enter directory path">
-        <input type="text" name="search_query" value="{{ search_query }}" placeholder="Search here">
-        <button type="submit">Refresh & Search</button>
-    </form>
+    <header>
+        <h1>Directory Structure Viewer</h1>
+        <form action="/" method="post">
+            <input type="text" name="search_query" value="{{ search_query }}" placeholder="Search here">
+            <button type="submit">Search</button>
+        </form>
+        <h2>Index of {{ root_directory }}</h2>
+    </header>
+
     {% if directory_structure %}
-    <ul>
-        {% for item, contents in directory_structure.items() %}
-        {% if contents %} <!-- Check if the contents is not None or empty, suggesting it is a folder -->
-        <li>&#128193; {{ item }} <!-- Folder icon -->
-            <ul>
-                {% for subitem, subcontents in contents.items() %}
-                {% if subcontents %} <!-- Recursive check for subfolders -->
-                <li>&#128193; {{ subitem }} <!-- Folder icon -->
-                    <ul>
-                        {% for file, dummy in subcontents.items() %}
-                        {% if dummy %} <!-- Further checking to differentiate files from folders -->
-                        <li>&#128193; {{ file }}</li> <!-- Folder icon for nested folders -->
-                        {% else %}
-                        <li>&#128196; {{ file }}</li> <!-- File icon -->
-                        {% endif %}
-                        {% endfor %}
-                    </ul>
-                </li>
+    <table>
+        <tr>
+            <th>
+                <a
+                    href="/?sort=type&order={{ 'file_top' if request.args.get('type_sort') == 'folder_top' else 'folder_top' }}&type_sort={{ request.args.get('type_sort', 'folder_top') }}">Type</a>
+            </th>
+            <th>
+                <a
+                    href="/?sort=name&order={{ 'desc' if request.args.get('sort') == 'name' and request.args.get('order') == 'asc' else 'asc' }}&type_sort={{ request.args.get('type_sort', 'folder_top') }}">Name</a>
+            </th>
+            <th>
+                <a
+                    href="/?sort=size&order={{ 'desc' if request.args.get('sort') == 'size' and request.args.get('order') == 'asc' else 'asc' }}&type_sort={{ request.args.get('type_sort', 'folder_top') }}">Size</a>
+            </th>
+            <th>
+                <a
+                    href="/?sort=last_modified&order={{ 'desc' if request.args.get('sort') == 'last_modified' and request.args.get('order') == 'asc' else 'asc' }}&type_sort={{ request.args.get('type_sort', 'folder_top') }}">Last
+                    Modified</a>
+            </th>
+        </tr>
+        {% for item, details in directory_structure.items() %}
+        <tr>
+            <td>{{ 'Directory' if details.is_directory else 'File' }}</td>
+            <td>
+                {% if details.is_directory %}
+                <button onclick="window.location.href='{{ root_directory }}/{{ item }}';">{{ item }}</button>
                 {% else %}
-                <li>&#128196; {{ subitem }}</li> <!-- File icon -->
+                {{ item }}
                 {% endif %}
-                {% endfor %}
-            </ul>
-        </li>
-        {% else %}
-        <li>&#128196; {{ item }}</li> <!-- File icon -->
-        {% endif %}
+            </td>
+            <td>{{ details.size }}</td>
+            <td>{{ details.last_modified }}</td>
+        </tr>
         {% endfor %}
-    </ul>
+    </table>
     {% endif %}
     {% if search_results %}
     <h2>Search Results:</h2>
