@@ -1,50 +1,25 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for
 import os
 import time
 
 app = Flask(__name__)
+# example gui https://alchemist.cyou
+
+base_directory = 'C:/Users/Ethan/Downloads'
 
 
 def get_directory_size(path):
-    """ Returns the total size of all files in the directory tree. """
     total_size = 0
-    for root, dirs, files in os.walk(path):
-        for file in files:
-            file_path = os.path.join(root, file)
-            total_size += os.path.getsize(file_path)
+    with os.scandir(path) as entries:
+        for entry in entries:
+            if entry.is_file():
+                total_size += entry.stat().st_size
+            elif entry.is_dir():
+                total_size += get_directory_size(entry.path)
     return total_size
 
 
-def get_directory_structure(rootdir):
-    directories = {}
-    files = {}
-    for path, dirs, file_list in os.walk(rootdir):
-        for name in sorted(dirs):
-            full_path = os.path.join(path, name)
-            size_bytes = get_directory_size(full_path)  # Get cumulative size
-            size = scale_size(size_bytes)
-            mtime = os.path.getmtime(full_path)
-            formatted_mtime = time.strftime(
-                '%Y-%m-%d %H:%M:%S', time.localtime(mtime))
-            directories[name] = {'is_directory': True,
-                                 'size': size, 'last_modified': formatted_mtime}
-        for name in sorted(file_list):
-            full_path = os.path.join(path, name)
-            size_bytes = os.path.getsize(full_path)
-            size = scale_size(size_bytes)
-            mtime = os.path.getmtime(full_path)
-            formatted_mtime = time.strftime(
-                '%Y-%m-%d %H:%M:%S', time.localtime(mtime))
-            files[name] = {'is_directory': False,
-                           'size': size, 'last_modified': formatted_mtime}
-        break
-    combined = {**directories, **files}
-    print(combined)
-    return combined
-
-
 def scale_size(size_bytes):
-    """Scale size to appropriate measurement (Bytes, KB, MB, GB, TB)."""
     if size_bytes < 1024:
         return f"{size_bytes} B"
     elif size_bytes < 1024**2:
@@ -55,6 +30,39 @@ def scale_size(size_bytes):
         return f"{size_bytes / 1024**3:.2f} GB"
     else:
         return f"{size_bytes / 1024**4:.2f} TB"
+
+
+def get_directory_structure(rootdir):
+    directories = {}
+    files = {}
+    for path, dirs, file_list in os.walk(rootdir):
+        for name in sorted(dirs):
+            full_path = os.path.join(path, name)
+            size_bytes = get_directory_size(full_path)
+            size = scale_size(size_bytes)
+            mtime = os.path.getmtime(full_path)
+            formatted_mtime = time.strftime(
+                '%m/%d/%Y %I:%M %p', time.localtime(mtime))
+            directories[name] = {'is_directory': True,
+                                 'size': size, 'last_modified': formatted_mtime}
+
+        for name in sorted(file_list):
+            full_path = os.path.join(path, name)
+            size_bytes = os.path.getsize(full_path)
+            size = scale_size(size_bytes)
+            mtime = os.path.getmtime(full_path)
+            print(f"mtime: {mtime}")
+            # Adjusting the format string to Month/Day/Year Hour:Minute AM/PM
+            formatted_mtime = time.strftime(
+                '%m/%d/%Y %I:%M %p', time.localtime(mtime))
+            print(f"formatted_mtime: {formatted_mtime}")
+            files[name] = {'is_directory': False,
+                           'size': size, 'last_modified': formatted_mtime}
+
+        break
+    combined = {**directories, **files}
+    print(f"Combined: {combined}")
+    return combined
 
 
 def search_files(directory, search_query):
@@ -76,17 +84,20 @@ def search_files(directory, search_query):
     return matches
 
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    hardcoded_root_directory = '/'
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>', methods=['GET', 'POST'])
+def index(path):
+    current_directory = os.path.join(
+        base_directory, path) if path else base_directory
+    print(f"Current directory: {current_directory}")
+    is_base_directory = (current_directory == base_directory)
     search_query = request.form.get('search_query', '')
     sort_by = request.args.get('sort', 'name')
     order = request.args.get('order', 'asc')
     type_sort = request.args.get('type_sort', 'folder_top')
 
-    directory_structure = get_directory_structure(hardcoded_root_directory)
+    directory_structure = get_directory_structure(current_directory)
 
-    # Sort based on type if requested
     if type_sort == 'folder_top':
         sorted_directory_structure = dict(sorted(directory_structure.items(),
                                                  key=lambda item: (
@@ -100,10 +111,11 @@ def index():
 
     search_results = []
     if request.method == 'POST' and search_query:
-        search_results = search_files(hardcoded_root_directory, search_query)
+        search_results = search_files(current_directory, search_query)
     return render_template('index.html', directory_structure=sorted_directory_structure,
-                           root_directory=hardcoded_root_directory, search_query=search_query,
-                           search_results=search_results, type_sort=type_sort)
+                           root_directory=current_directory, search_query=search_query,
+                           search_results=search_results, type_sort=type_sort,
+                           is_base_directory=is_base_directory)
 
 
 if __name__ == '__main__':

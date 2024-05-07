@@ -41,3 +41,35 @@ ul {
 li {
   margin: 5px 0; /* Margin between list items */
 }
+
+/* Styling for tables */
+table {
+  width: 100%;
+  border-collapse: collapse; /* Ensures there are no gaps between cells */
+}
+
+th,
+td {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.directory-button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background: none;
+  border: none;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.directory-button:hover {
+  background-color: #f0f0f0;
+}
+
+.file-row {
+  cursor: default;
+}

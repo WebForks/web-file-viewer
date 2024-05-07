@@ -6,6 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Directory Structure Viewer</title>
     <link rel="stylesheet" href="/static/style.css">
+    <script>
+        function navigateTo(item) {
+            const newPath = window.location.pathname === '/' ? item : `${window.location.pathname}/${item}`;
+            window.location.href = newPath;
+        }
+
+        function goUpOneDirectory() {
+            const currentPath = window.location.pathname;
+            const upOnePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+            window.location.href = upOnePath || '/';
+        }
+    </script>
 </head>
 
 <body>
@@ -15,40 +27,25 @@
             <input type="text" name="search_query" value="{{ search_query }}" placeholder="Search here">
             <button type="submit">Search</button>
         </form>
-        <h2>Index of {{ root_directory }}</h2>
+        <h2>Index of {{ root_directory.replace('\\', '/') }}</h2>
+        {% if not is_base_directory %}
+        <button onclick="goUpOneDirectory()">Up One Directory</button>
+        {% endif %}
     </header>
 
     {% if directory_structure %}
     <table>
         <tr>
-            <th>
-                <a
-                    href="/?sort=type&order={{ 'file_top' if request.args.get('type_sort') == 'folder_top' else 'folder_top' }}&type_sort={{ request.args.get('type_sort', 'folder_top') }}">Type</a>
-            </th>
-            <th>
-                <a
-                    href="/?sort=name&order={{ 'desc' if request.args.get('sort') == 'name' and request.args.get('order') == 'asc' else 'asc' }}&type_sort={{ request.args.get('type_sort', 'folder_top') }}">Name</a>
-            </th>
-            <th>
-                <a
-                    href="/?sort=size&order={{ 'desc' if request.args.get('sort') == 'size' and request.args.get('order') == 'asc' else 'asc' }}&type_sort={{ request.args.get('type_sort', 'folder_top') }}">Size</a>
-            </th>
-            <th>
-                <a
-                    href="/?sort=last_modified&order={{ 'desc' if request.args.get('sort') == 'last_modified' and request.args.get('order') == 'asc' else 'asc' }}&type_sort={{ request.args.get('type_sort', 'folder_top') }}">Last
-                    Modified</a>
-            </th>
+            <th>Type</th>
+            <th>Name</th>
+            <th>Size</th>
+            <th>Last Modified</th>
         </tr>
         {% for item, details in directory_structure.items() %}
-        <tr>
+        <tr class="{{ 'clickable' if details.is_directory else 'non-clickable' }}" {% if details.is_directory
+            %}onclick="navigateTo('{{ item }}');" style="cursor: pointer;" {% endif %}>
             <td>{{ 'Directory' if details.is_directory else 'File' }}</td>
-            <td>
-                {% if details.is_directory %}
-                <button onclick="window.location.href='{{ root_directory }}/{{ item }}';">{{ item }}</button>
-                {% else %}
-                {{ item }}
-                {% endif %}
-            </td>
+            <td>{{ item }}</td>
             <td>{{ details.size }}</td>
             <td>{{ details.last_modified }}</td>
         </tr>
