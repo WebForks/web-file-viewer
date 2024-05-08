@@ -85,8 +85,14 @@ def search_files(directory, search_query):
 @app.route('/search/<search_query>')
 def search(search_query):
     search_results = search_files(base_directory, search_query)
-    search_results = [{'name': os.path.basename(
-        path), 'path': path} for path in search_results]
+    search_results = [{
+        'name': os.path.basename(path),
+        'path': path,
+        'type': 'Directory' if os.path.isdir(path) else 'File',
+        'size': scale_size(os.path.getsize(path)),
+        'last_modified': time.strftime('%m/%d/%Y %I:%M %p', time.localtime(os.path.getmtime(path))),
+        'parent_directory': os.path.dirname(path)
+    } for path in search_results]
     results_count = len(search_results)  # Calculate the number of results
     return render_template('search_results.html', search_query=search_query, search_results=search_results, results_count=results_count, base_directory=base_directory)
 

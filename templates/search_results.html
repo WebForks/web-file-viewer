@@ -13,20 +13,33 @@
         <h1>Directory Structure Viewer</h1>
         <form
             onsubmit="event.preventDefault(); window.location.href = '/search/' + encodeURIComponent(this.search_query.value);">
-            <input type="text" name="search_query" value="{{ search_query }}" placeholder="Search here">
+            <input type="text" name="search_query" placeholder="Search here">
             <button type="submit">Search</button>
         </form>
         <h2>{{ results_count }} Search Results for '{{ search_query }}'</h2>
     </header>
 
     {% if search_results %}
-    <ul>
+    <table>
+        <tr>
+            <th>Type</th>
+            <th>Name</th>
+            <th>Size</th>
+            <th>Last Modified</th>
+            <th>Path</th>
+        </tr>
         {% for result in search_results %}
-        <li>{{ result.name }} - <a
-                href="{{ url_for('index', path=result.path.replace(base_directory, '').lstrip('/')) }}">{{ result.path
-                }}</a></li>
+        <tr data-url="{{ url_for('index', path=result.parent_directory.replace(base_directory, '').lstrip('/\\').replace('\\', '/')) }}"
+            onclick="window.location.href = this.getAttribute('data-url');" style="cursor: pointer;">
+            <td>{{ result.type }}</td>
+            <td>{{ result.name }}</td>
+            <td>{{ result.size }}</td>
+            <td>{{ result.last_modified }}</td>
+            <td>{{ result.parent_directory.replace('\\', '/') }}</td>
+        </tr>
+
         {% endfor %}
-    </ul>
+    </table>
     {% else %}
     <p>No results found.</p>
     {% endif %}
