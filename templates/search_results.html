@@ -22,24 +22,34 @@
     {% if search_results %}
     <table>
         <tr>
-            <th>Type</th>
-            <th>Name</th>
-            <th>Size</th>
-            <th>Last Modified</th>
-            <th>Path</th>
+            <th><a
+                    href="{{ url_for('search', search_query=search_query, sort='type', order='asc' if sort_by == 'type' and order == 'desc' else 'desc') }}">Type</a>
+            </th>
+            <th><a
+                    href="{{ url_for('search', search_query=search_query, sort='name', order='asc' if sort_by == 'name' and order == 'desc' else 'desc') }}">Name</a>
+            </th>
+            <th><a
+                    href="{{ url_for('search', search_query=search_query, sort='path', order='asc' if sort_by == 'path' and order == 'desc' else 'desc') }}">Path</a>
+            </th>
+            <th><a
+                    href="{{ url_for('search', search_query=search_query, sort='size', order='asc' if sort_by == 'size' and order == 'desc' else 'desc') }}">Size</a>
+            </th>
+            <th><a
+                    href="{{ url_for('search', search_query=search_query, sort='last_modified', order='asc' if sort_by == 'last_modified' and order == 'desc' else 'desc') }}">Last
+                    Modified</a></th>
         </tr>
         {% for result in search_results %}
         <tr data-url="{{ url_for('index', path=result.parent_directory.replace(base_directory, '').lstrip('/\\').replace('\\', '/')) }}"
             onclick="window.location.href = this.getAttribute('data-url');" style="cursor: pointer;">
             <td>{{ result.type }}</td>
             <td>{{ result.name }}</td>
+            <td>{{ result.parent_directory.replace('\\', '/') }}</td>
             <td>{{ result.size }}</td>
             <td>{{ result.last_modified }}</td>
-            <td>{{ result.parent_directory.replace('\\', '/') }}</td>
         </tr>
-
         {% endfor %}
     </table>
+
     {% else %}
     <p>No results found.</p>
     {% endif %}

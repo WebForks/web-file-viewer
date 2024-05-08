@@ -1,3 +1,4 @@
+from flask import request  # Make sure to import request
 from flask import Flask, render_template, request, redirect, url_for
 import os
 import time
@@ -84,6 +85,10 @@ def search_files(directory, search_query):
 
 @app.route('/search/<search_query>')
 def search(search_query):
+    # Retrieve sort parameters from the URL query string, default to 'name' and 'asc'
+    sort_by = request.args.get('sort', 'name')
+    order = request.args.get('order', 'asc')
+
     search_results = search_files(base_directory, search_query)
     search_results = [{
         'name': os.path.basename(path),
@@ -93,8 +98,12 @@ def search(search_query):
         'last_modified': time.strftime('%m/%d/%Y %I:%M %p', time.localtime(os.path.getmtime(path))),
         'parent_directory': os.path.dirname(path)
     } for path in search_results]
+
+    # Sorting function using lambda based on sort_by and order
+    search_results.sort(key=lambda x: x[sort_by], reverse=(order == 'desc'))
+
     results_count = len(search_results)  # Calculate the number of results
-    return render_template('search_results.html', search_query=search_query, search_results=search_results, results_count=results_count, base_directory=base_directory)
+    return render_template('search_results.html', search_query=search_query, search_results=search_results, results_count=results_count, base_directory=base_directory, sort_by=sort_by, order=order)
 
 
 @app.route('/', defaults={'path': ''})
