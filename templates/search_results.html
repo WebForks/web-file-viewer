@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results - Directory Structure Viewer</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <header>
+        <h1>Directory Structure Viewer</h1>
+        <form
+            onsubmit="event.preventDefault(); window.location.href = '/search/' + encodeURIComponent(this.search_query.value);">
+            <input type="text" name="search_query" value="{{ search_query }}" placeholder="Search here">
+            <button type="submit">Search</button>
+        </form>
+        <h2>{{ results_count }} Search Results for '{{ search_query }}'</h2>
+    </header>
+
+    {% if search_results %}
+    <ul>
+        {% for result in search_results %}
+        <li>{{ result.name }} - <a
+                href="{{ url_for('index', path=result.path.replace(base_directory, '').lstrip('/')) }}">{{ result.path
+                }}</a></li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>No results found.</p>
+    {% endif %}
+</body>
+
+</html>

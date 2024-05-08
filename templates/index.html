@@ -23,10 +23,12 @@
 <body>
     <header>
         <h1>Directory Structure Viewer</h1>
-        <form action="/" method="post">
+        <form
+            onsubmit="event.preventDefault(); window.location.href = '/search/' + encodeURIComponent(this.search_query.value);">
             <input type="text" name="search_query" value="{{ search_query }}" placeholder="Search here">
             <button type="submit">Search</button>
         </form>
+
         <h2>Index of {{ root_directory.replace('\\', '/') }}</h2>
         {% if not is_base_directory %}
         <button onclick="goUpOneDirectory()">Up One Directory</button>
@@ -51,14 +53,6 @@
         </tr>
         {% endfor %}
     </table>
-    {% endif %}
-    {% if search_results %}
-    <h2>Search Results:</h2>
-    <ul>
-        {% for result in search_results %}
-        <li>{{ result }}</li>
-        {% endfor %}
-    </ul>
     {% endif %}
 </body>
 

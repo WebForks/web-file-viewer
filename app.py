@@ -51,52 +51,57 @@ def get_directory_structure(rootdir):
             size_bytes = os.path.getsize(full_path)
             size = scale_size(size_bytes)
             mtime = os.path.getmtime(full_path)
-            print(f"mtime: {mtime}")
+            # print(f"mtime: {mtime}")
             # Adjusting the format string to Month/Day/Year Hour:Minute AM/PM
             formatted_mtime = time.strftime(
                 '%m/%d/%Y %I:%M %p', time.localtime(mtime))
-            print(f"formatted_mtime: {formatted_mtime}")
+            # print(f"formatted_mtime: {formatted_mtime}")
             files[name] = {'is_directory': False,
                            'size': size, 'last_modified': formatted_mtime}
 
         break
     combined = {**directories, **files}
-    print(f"Combined: {combined}")
+    # print(f"Combined: {combined}")
     return combined
 
 
 def search_files(directory, search_query):
     """
-    Search for files and directories that match the search_query within 'directory',
-    but only within the immediate subdirectories and files of the root.
+    Search recursively for files and directories that match the search_query within 'directory'.
     """
     matches = []
     for path, dirs, files in os.walk(directory):
-        # Check directories and files only in the root
-        for dir in dirs:
-            if search_query.lower() in dir.lower():
-                matches.append(os.path.join(path, dir))
-        for file in files:
-            if search_query.lower() in file.lower():
-                matches.append(os.path.join(path, file))
-        # Stop after checking the root directory
-        break
+        for dir_name in dirs:
+            if search_query.lower() in dir_name.lower():
+                full_path = os.path.join(path, dir_name)
+                matches.append(full_path)
+        for file_name in files:
+            if search_query.lower() in file_name.lower():
+                full_path = os.path.join(path, file_name)
+                matches.append(full_path)
     return matches
 
 
+@app.route('/search/<search_query>')
+def search(search_query):
+    search_results = search_files(base_directory, search_query)
+    search_results = [{'name': os.path.basename(
+        path), 'path': path} for path in search_results]
+    results_count = len(search_results)  # Calculate the number of results
+    return render_template('search_results.html', search_query=search_query, search_results=search_results, results_count=results_count, base_directory=base_directory)
+
+
 @app.route('/', defaults={'path': ''})
-@app.route('/<path:path>', methods=['GET', 'POST'])
+@app.route('/<path:path>', methods=['GET'])  # Removed 'POST'
 def index(path):
     current_directory = os.path.join(
         base_directory, path) if path else base_directory
-    print(f"Current directory: {current_directory}")
     is_base_directory = (current_directory == base_directory)
-    search_query = request.form.get('search_query', '')
+
+    directory_structure = get_directory_structure(current_directory)
     sort_by = request.args.get('sort', 'name')
     order = request.args.get('order', 'asc')
     type_sort = request.args.get('type_sort', 'folder_top')
-
-    directory_structure = get_directory_structure(current_directory)
 
     if type_sort == 'folder_top':
         sorted_directory_structure = dict(sorted(directory_structure.items(),
@@ -109,13 +114,8 @@ def index(path):
                                                      item[1]['is_directory'], item[0] if sort_by == 'name' else item[1][sort_by]),
                                                  reverse=(order == 'desc')))
 
-    search_results = []
-    if request.method == 'POST' and search_query:
-        search_results = search_files(current_directory, search_query)
     return render_template('index.html', directory_structure=sorted_directory_structure,
-                           root_directory=current_directory, search_query=search_query,
-                           search_results=search_results, type_sort=type_sort,
-                           is_base_directory=is_base_directory)
+                           root_directory=current_directory, is_base_directory=is_base_directory)
 
 
 if __name__ == '__main__':
