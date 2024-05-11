@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   web:
-    image: webfile-viewer
+    image: ankhussy/webfile-viewer:latest
     build: .
     ports:
       - "5167:5167"
