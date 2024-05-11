@@ -5,5 +5,5 @@ services:
     build: .
     ports:
       - "5167:5167"
-    environment:
-      - BASE_DIRECTORY=/data
+    volumes:
+      - {DIRECTORY}:/data

@@ -12,11 +12,11 @@ app = Flask(__name__)
 
 # Run your Docker container
 # docker run -p 5167:5167 -e BASE_DIRECTORY=/path/on/container webfile-viewer
-# docker-compose up -d --build
+# docker-compose up --build
 # docker-compose down
 
 
-base_directory = os.getenv('BASE_DIRECTORY', '/')
+base_directory = '/data'
 
 
 def get_directory_size(path):
@@ -120,6 +120,7 @@ def index(path):
     current_directory = os.path.join(
         base_directory, path) if path else base_directory
     is_base_directory = (current_directory == base_directory)
+    print(current_directory, is_base_directory)
 
     # Retrieve sorting parameters with defaults set to sort by type descending
     sort_by = request.args.get('sort', 'type_sort')
