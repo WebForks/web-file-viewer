@@ -22,7 +22,7 @@
 
 <body>
     <header>
-        <h1>Directory Structure Viewer</h1>
+        <h1><a href="/" style="text-decoration: none; color: inherit;">Directory Structure Viewer</a></h1>
         <form
             onsubmit="event.preventDefault(); window.location.href = '/search/' + encodeURIComponent(this.search_query.value);">
             <input type="text" name="search_query" value="{{ search_query }}" placeholder="Search here">
@@ -37,12 +37,18 @@
 
     {% if directory_structure %}
     <table>
-        <tr>
-            <th>Type</th>
-            <th>Name</th>
-            <th>Size</th>
-            <th>Last Modified</th>
-        </tr>
+        <th><a
+                href="?sort=type_sort&order={{ 'asc' if request.args.get('sort') == 'type_sort' and request.args.get('order') == 'desc' else 'desc' }}">Type</a>
+        </th>
+        <th><a
+                href="?sort=name&order={{ 'asc' if request.args.get('sort') == 'name' and request.args.get('order') == 'desc' else 'desc' }}">Name</a>
+        </th>
+        <th><a
+                href="?sort=size&order={{ 'asc' if request.args.get('sort') == 'size' and request.args.get('order') == 'desc' else 'desc' }}">Size</a>
+        </th>
+        <th><a
+                href="?sort=last_modified&order={{ 'asc' if request.args.get('sort') == 'last_modified' and request.args.get('order') == 'desc' else 'desc' }}">Last
+                Modified</a></th>
         {% for item, details in directory_structure.items() %}
         <tr class="{{ 'clickable' if details.is_directory else 'non-clickable' }}" {% if details.is_directory
             %}onclick="navigateTo('{{ item }}');" style="cursor: pointer;" {% endif %}>

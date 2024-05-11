@@ -6,7 +6,17 @@ import time
 app = Flask(__name__)
 # example gui https://alchemist.cyou
 # https://stackoverflow.com/questions/49770999/docker-env-for-python-variables
-base_directory = 'C:/Users/Ethan/Downloads'
+
+# # Build your Docker image
+# docker build -t webfile-viewer .
+
+# Run your Docker container
+# docker run -p 5167:5167 -e BASE_DIRECTORY=/path/on/container webfile-viewer
+# docker-compose up -d --build
+# docker-compose down
+
+
+base_directory = os.getenv('BASE_DIRECTORY', '/')
 
 
 def get_directory_size(path):
@@ -45,24 +55,22 @@ def get_directory_structure(rootdir):
             formatted_mtime = time.strftime(
                 '%m/%d/%Y %I:%M %p', time.localtime(mtime))
             directories[name] = {'is_directory': True,
-                                 'size': size, 'last_modified': formatted_mtime}
+                                 'size': size, 'size_bytes': size_bytes,
+                                 'last_modified': formatted_mtime}
 
         for name in sorted(file_list):
             full_path = os.path.join(path, name)
             size_bytes = os.path.getsize(full_path)
             size = scale_size(size_bytes)
             mtime = os.path.getmtime(full_path)
-            # print(f"mtime: {mtime}")
-            # Adjusting the format string to Month/Day/Year Hour:Minute AM/PM
             formatted_mtime = time.strftime(
                 '%m/%d/%Y %I:%M %p', time.localtime(mtime))
-            # print(f"formatted_mtime: {formatted_mtime}")
             files[name] = {'is_directory': False,
-                           'size': size, 'last_modified': formatted_mtime}
+                           'size': size, 'size_bytes': size_bytes,
+                           'last_modified': formatted_mtime}
 
-        break
+        break  # Ensure you really want to stop after the first iteration
     combined = {**directories, **files}
-    # print(f"Combined: {combined}")
     return combined
 
 
@@ -107,31 +115,41 @@ def search(search_query):
 
 
 @app.route('/', defaults={'path': ''})
-@app.route('/<path:path>', methods=['GET'])  # Removed 'POST'
+@app.route('/<path:path>', methods=['GET'])
 def index(path):
     current_directory = os.path.join(
         base_directory, path) if path else base_directory
     is_base_directory = (current_directory == base_directory)
 
-    directory_structure = get_directory_structure(current_directory)
-    sort_by = request.args.get('sort', 'name')
-    order = request.args.get('order', 'asc')
-    type_sort = request.args.get('type_sort', 'folder_top')
+    # Retrieve sorting parameters with defaults set to sort by type descending
+    sort_by = request.args.get('sort', 'type_sort')
+    order = request.args.get('order', 'desc')
 
-    if type_sort == 'folder_top':
-        sorted_directory_structure = dict(sorted(directory_structure.items(),
-                                                 key=lambda item: (
-                                                     not item[1]['is_directory'], item[0] if sort_by == 'name' else item[1][sort_by]),
-                                                 reverse=(order == 'desc')))
-    else:
-        sorted_directory_structure = dict(sorted(directory_structure.items(),
-                                                 key=lambda item: (
-                                                     item[1]['is_directory'], item[0] if sort_by == 'name' else item[1][sort_by]),
-                                                 reverse=(order == 'desc')))
+    directory_structure = get_directory_structure(current_directory)
+
+    # Define the sorting key based on the parameter
+    def sort_key(item):
+        if sort_by == 'size':
+            return item[1]['size_bytes']
+        elif sort_by == 'last_modified':
+            return time.mktime(time.strptime(item[1]['last_modified'], '%m/%d/%Y %I:%M %p'))
+        elif sort_by == 'name':
+            return item[0]
+        elif sort_by == 'type_sort':
+            # Directories first if descending
+            return item[1]['is_directory']
+        else:
+            # Default to sorting by name if unrecognized sort type
+            return item[0]
+
+    reverse_order = (order == 'desc')
+    sorted_directory_structure = dict(
+        sorted(directory_structure.items(), key=sort_key, reverse=reverse_order))
 
     return render_template('index.html', directory_structure=sorted_directory_structure,
-                           root_directory=current_directory, is_base_directory=is_base_directory)
+                           root_directory=current_directory, is_base_directory=is_base_directory,
+                           sort_by=sort_by, order=order)
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5167, debug=True)
