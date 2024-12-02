@@ -44,34 +44,26 @@ def scale_size(size_bytes):
 
 
 def get_directory_structure(rootdir):
-    directories = {}
-    files = {}
-    for path, dirs, file_list in os.walk(rootdir):
-        for name in sorted(dirs):
-            full_path = os.path.join(path, name)
+    entries = {}
+    for name in sorted(os.listdir(rootdir)):
+        full_path = os.path.join(rootdir, name)
+        if os.path.isdir(full_path):
             size_bytes = get_directory_size(full_path)
-            size = scale_size(size_bytes)
-            mtime = os.path.getmtime(full_path)
-            formatted_mtime = time.strftime(
-                '%m/%d/%Y %I:%M %p', time.localtime(mtime))
-            directories[name] = {'is_directory': True,
-                                 'size': size, 'size_bytes': size_bytes,
-                                 'last_modified': formatted_mtime}
-
-        for name in sorted(file_list):
-            full_path = os.path.join(path, name)
+            is_directory = True
+        else:
             size_bytes = os.path.getsize(full_path)
-            size = scale_size(size_bytes)
-            mtime = os.path.getmtime(full_path)
-            formatted_mtime = time.strftime(
-                '%m/%d/%Y %I:%M %p', time.localtime(mtime))
-            files[name] = {'is_directory': False,
-                           'size': size, 'size_bytes': size_bytes,
-                           'last_modified': formatted_mtime}
-
-        break  # Ensure you really want to stop after the first iteration
-    combined = {**directories, **files}
-    return combined
+            is_directory = False
+        size = scale_size(size_bytes)
+        mtime = os.path.getmtime(full_path)
+        formatted_mtime = time.strftime(
+            '%m/%d/%Y %I:%M %p', time.localtime(mtime))
+        entries[name] = {
+            'is_directory': is_directory,
+            'size': size,
+            'size_bytes': size_bytes,
+            'last_modified': formatted_mtime
+        }
+    return entries
 
 
 def search_files(directory, search_query):
