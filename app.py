@@ -20,7 +20,7 @@ app = Flask(__name__)
 # docker-compose down
 
 
-#base_directory = '/data'
+base_directory = '/data'
 
 executor = ThreadPoolExecutor(max_workers=4)  # Adjust the number of workers as needed
 
