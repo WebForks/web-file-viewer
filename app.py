@@ -4,6 +4,8 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
+from concurrent.futures import ThreadPoolExecutor
+import threading
 
 app = Flask(__name__)
 # example gui https://alchemist.cyou
@@ -20,9 +22,13 @@ app = Flask(__name__)
 
 #base_directory = '/data'
 
+executor = ThreadPoolExecutor(max_workers=4)  # Adjust the number of workers as needed
+
+cache_lock = threading.Lock()
 @lru_cache(maxsize=100)  # Cache up to 100 directories
 def get_directory_structure_cached(rootdir):
-    return get_directory_structure(rootdir)
+    with cache_lock:
+        return get_directory_structure(rootdir)
 
 def get_directory_size(path):
     def folder_size(sub_path):
@@ -139,12 +145,24 @@ def search(search_query):
 def index(path):
     current_directory = os.path.join(
         base_directory, path) if path else base_directory
+    parent_directory = os.path.dirname(current_directory) if current_directory != base_directory else None
+
     is_base_directory = (current_directory == base_directory)
     print(current_directory, is_base_directory)
 
     # Retrieve sorting parameters with defaults set to sort by type descending
     sort_by = request.args.get('sort', 'type_sort')
     order = request.args.get('order', 'desc')
+
+    # Pre-fetch parent directory in the background (if it exists)
+    if parent_directory and not is_base_directory:
+        executor.submit(get_directory_structure_cached, parent_directory)
+
+    # Pre-fetch subdirectories
+    for entry in os.scandir(current_directory):
+        if entry.is_dir():
+            executor.submit(get_directory_structure_cached, entry.path)
+
 
     directory_structure = get_directory_structure_cached(current_directory)
 
