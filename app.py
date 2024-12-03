@@ -3,6 +3,10 @@ from flask import Flask, render_template, request, redirect, url_for
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
+from concurrent.futures import ThreadPoolExecutor
+import threading
+import logging
 
 app = Flask(__name__)
 # example gui https://alchemist.cyou
@@ -19,38 +23,37 @@ app = Flask(__name__)
 
 base_directory = '/data'
 
+executor = ThreadPoolExecutor(max_workers=4)  # Adjust the number of workers as needed
+logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
+
+cache_lock = threading.Lock()
+@lru_cache(maxsize=100)  # Cache up to 100 directories
+def get_directory_structure_cached(rootdir):
+    with cache_lock:
+        return get_directory_structure(rootdir)
+
 def get_directory_size(path):
     def folder_size(sub_path):
         size = 0
-        with os.scandir(sub_path) as entries:
-            for entry in entries:
-                try:
-                    if entry.is_file():
-                        size += entry.stat().st_size
-                    elif entry.is_dir():
-                        size += folder_size(entry.path)  # Recursive call
-                except FileNotFoundError:
-                    pass
+        try:
+            with os.scandir(sub_path) as entries:
+                for entry in entries:
+                    try:
+                        if entry.is_file():
+                            size += entry.stat().st_size
+                        elif entry.is_dir():
+                            size += folder_size(entry.path)  # Recursive call
+                    except (FileNotFoundError, PermissionError) as e:
+                        logging.warning(f"Skipping file or directory: {entry.path} ({e})")
+        except (FileNotFoundError, PermissionError) as e:
+            logging.warning(f"Skipping directory: {sub_path} ({e})")
         return size
 
-    total_size = 0
-    with os.scandir(path) as entries:
-        subdirs = [entry.path for entry in entries if entry.is_dir()]
-        files = [entry for entry in entries if entry.is_file()]
+    if not os.path.exists(path):
+        logging.warning(f"Path does not exist: {path}")
+        return 0
 
-        # Process files in the current directory
-        for file in files:
-            try:
-                total_size += file.stat().st_size
-            except FileNotFoundError:
-                pass
-
-        # Use threads to process subdirectories in parallel
-        with ThreadPoolExecutor() as executor:
-            sizes = executor.map(folder_size, subdirs)
-        total_size += sum(sizes)
-
-    return total_size
+    return folder_size(path)
 
 
 def scale_size(size_bytes):
@@ -134,6 +137,8 @@ def search(search_query):
 def index(path):
     current_directory = os.path.join(
         base_directory, path) if path else base_directory
+    parent_directory = os.path.dirname(current_directory) if current_directory != base_directory else None
+
     is_base_directory = (current_directory == base_directory)
     print(current_directory, is_base_directory)
 
@@ -141,14 +146,24 @@ def index(path):
     sort_by = request.args.get('sort', 'type_sort')
     order = request.args.get('order', 'desc')
 
-    directory_structure = get_directory_structure(current_directory)
+    # Pre-fetch parent directory in the background (if it exists)
+    if parent_directory and not is_base_directory:
+        executor.submit(get_directory_structure_cached, parent_directory)
+
+    # Pre-fetch subdirectories
+    for entry in os.scandir(current_directory):
+        if entry.is_dir():
+            executor.submit(get_directory_structure_cached, entry.path)
+
+
+    directory_structure = get_directory_structure_cached(current_directory)
 
     # Define the sorting key based on the parameter
     def sort_key(item):
         if sort_by == 'size':
             return item[1]['size_bytes']
         elif sort_by == 'last_modified':
-            return time.mktime(time.strptime(item[1]['last_modified'], '%m/%d/%Y %I:%M %p'))
+            return item[1]['last_modified']
         elif sort_by == 'name':
             return item[0]
         elif sort_by == 'type_sort':
