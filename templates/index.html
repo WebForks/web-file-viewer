@@ -9,9 +9,11 @@
     <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
     <script>
         function navigateTo(item) {
-            const newPath = window.location.pathname === '/' ? item : `${window.location.pathname}/${item}`;
+            const encodedPath = encodeURIComponent(item);
+            const newPath = window.location.pathname === '/' ? encodedPath : `${window.location.pathname}/${encodedPath}`;
             window.location.href = newPath;
         }
+
 
         function goUpOneDirectory() {
             const currentPath = window.location.pathname;
