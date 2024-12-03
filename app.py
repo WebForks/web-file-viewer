@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, redirect, url_for
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 
 app = Flask(__name__)
 # example gui https://alchemist.cyou
@@ -17,7 +18,11 @@ app = Flask(__name__)
 # docker-compose down
 
 
-base_directory = '/data'
+#base_directory = '/data'
+
+@lru_cache(maxsize=100)  # Cache up to 100 directories
+def get_directory_structure_cached(rootdir):
+    return get_directory_structure(rootdir)
 
 def get_directory_size(path):
     def folder_size(sub_path):
@@ -141,14 +146,14 @@ def index(path):
     sort_by = request.args.get('sort', 'type_sort')
     order = request.args.get('order', 'desc')
 
-    directory_structure = get_directory_structure(current_directory)
+    directory_structure = get_directory_structure_cached(current_directory)
 
     # Define the sorting key based on the parameter
     def sort_key(item):
         if sort_by == 'size':
             return item[1]['size_bytes']
         elif sort_by == 'last_modified':
-            return time.mktime(time.strptime(item[1]['last_modified'], '%m/%d/%Y %I:%M %p'))
+            return item[1]['last_modified']
         elif sort_by == 'name':
             return item[0]
         elif sort_by == 'type_sort':
