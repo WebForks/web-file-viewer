@@ -8,93 +8,102 @@ html {
   font-family: "Arial", sans-serif;
 }
 
-/* Styling for the entire body */
+/* Body styling */
 body {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  height: 100vh;
-  background-color: #050505; /* Dark background color */
-  color: #f0f0f0; /* Light text color */
+  background-color: #121212; /* Dark theme */
+  color: #ffffff; /* Light text */
 }
 
-/* Styling for the header */
+/* Header styling */
 header {
   text-align: center;
   width: 100%;
-  padding: 20px 0;
+  padding: 20px;
 }
 
-/* Styling for forms */
-form {
+header h1 {
+  font-family: "Helvetica", sans-serif;
+  font-size: 2.5rem;
+  color: #ffffff;
+}
+
+header form {
   margin: 20px 0;
 }
 
-input[type="text"] {
+header input[type="text"] {
+  width: 300px;
   padding: 10px;
-  background-color: #333;
-  border: none;
-  color: #f0f0f0;
+  border: 1px solid #444;
+  border-radius: 5px;
+  background-color: #1e1e1e;
+  color: #fff;
 }
 
-button {
+header button {
   padding: 10px 20px;
-  background-color: #333;
-  color: #f0f0f0;
   border: none;
+  background-color: #333;
+  color: #fff;
+  border-radius: 5px;
   cursor: pointer;
 }
 
-button:hover {
+header button:hover {
   background-color: #555;
 }
 
-/* Styling for tables */
+/* Table styling */
 table {
-  width: 90%; /* Adjusted width */
-  margin-top: 20px; /* Spacing from form */
+  width: 90%;
+  margin: 20px auto;
   border-collapse: collapse;
+  background-color: #1e1e1e;
 }
 
 th,
 td {
-  padding: 15px; /* Increased padding for a better look */
+  padding: 15px;
   text-align: left;
-  border-bottom: 1px solid #333; /* Darker line for separation */
+  color: #ccc;
+  border-bottom: 1px solid #333;
+}
+
+th {
+  color: #fff;
+  text-transform: uppercase;
 }
 
 tr:hover {
-  background-color: #333; /* Hover effect for rows */
+  background-color: #333; /* Row hover effect */
 }
 
-/* Styling for clickable elements */
+/* Folder/File row styling */
 .clickable:hover {
-  background-color: #444; /* Dark hover effect */
+  background-color: #444;
   cursor: pointer;
 }
 
-/* Additional styling */
-ul,
-li {
-  padding: 0;
-  margin: 0;
-  list-style: none;
+.clickable td:first-child {
+  color: #ffcc00; /* Folder icon color */
 }
 
-.directory-button,
-.file-row {
-  text-align: left;
-  display: block;
+/* Extra styling for folder labels */
+td:first-child {
+  font-weight: bold;
+  text-transform: capitalize;
+}
+
+/* Footer (if necessary) */
+footer {
   width: 100%;
-  padding: 10px;
-  background: none;
-  border: none;
-  color: inherit;
-  text-decoration: none;
-}
-
-.directory-button:hover,
-.file-row:hover {
-  background-color: #333; /* Hover effect */
+  text-align: center;
+  padding: 10px 0;
+  background-color: #181818;
+  color: #fff;
+  font-size: 0.9rem;
 }

@@ -2,6 +2,7 @@ from flask import request  # Make sure to import request
 from flask import Flask, render_template, request, redirect, url_for
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 app = Flask(__name__)
 # example gui https://alchemist.cyou
@@ -18,15 +19,37 @@ app = Flask(__name__)
 
 base_directory = '/data'
 
-
 def get_directory_size(path):
+    def folder_size(sub_path):
+        size = 0
+        with os.scandir(sub_path) as entries:
+            for entry in entries:
+                try:
+                    if entry.is_file():
+                        size += entry.stat().st_size
+                    elif entry.is_dir():
+                        size += folder_size(entry.path)  # Recursive call
+                except FileNotFoundError:
+                    pass
+        return size
+
     total_size = 0
     with os.scandir(path) as entries:
-        for entry in entries:
-            if entry.is_file():
-                total_size += entry.stat().st_size
-            elif entry.is_dir():
-                total_size += get_directory_size(entry.path)
+        subdirs = [entry.path for entry in entries if entry.is_dir()]
+        files = [entry for entry in entries if entry.is_file()]
+
+        # Process files in the current directory
+        for file in files:
+            try:
+                total_size += file.stat().st_size
+            except FileNotFoundError:
+                pass
+
+        # Use threads to process subdirectories in parallel
+        with ThreadPoolExecutor() as executor:
+            sizes = executor.map(folder_size, subdirs)
+        total_size += sum(sizes)
+
     return total_size
 
 
