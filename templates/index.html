@@ -20,6 +20,13 @@
             const upOnePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
             window.location.href = upOnePath || '/';
         }
+
+        function rescanDirectory() {
+            // Clear the cache by adding a timestamp parameter
+            const currentUrl = window.location.href;
+            const separator = currentUrl.includes('?') ? '&' : '?';
+            window.location.href = currentUrl + separator + 'rescan=' + new Date().getTime();
+        }
     </script>
 </head>
 
@@ -32,7 +39,7 @@
             <button type="submit">Search</button>
         </form>
 
-        <h2>Index of {{ root_directory.replace('\\', '/') }}</h2>
+        <h2>Index of {{ root_directory.replace('\\', '/') }} <button onclick="rescanDirectory()">ReScan</button></h2>
         {% if not is_base_directory %}
         <button onclick="goUpOneDirectory()">Up One Directory</button>
         {% endif %}

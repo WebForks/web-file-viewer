@@ -2,11 +2,11 @@ from flask import request  # Make sure to import request
 from flask import Flask, render_template, request, redirect, url_for
 import os
 import time
-from concurrent.futures import ThreadPoolExecutor
-from functools import lru_cache
+import subprocess
 from concurrent.futures import ThreadPoolExecutor
 import threading
 import logging
+import math
 
 app = Flask(__name__)
 # example gui https://alchemist.cyou
@@ -22,39 +22,20 @@ app = Flask(__name__)
 
 
 base_directory = '/data'
+PAGE_SIZE = 50  # Number of items per page
 
-executor = ThreadPoolExecutor(max_workers=4)  # Adjust the number of workers as needed
+executor = ThreadPoolExecutor(max_workers=4)
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
 
-cache_lock = threading.Lock()
-@lru_cache(maxsize=100)  # Cache up to 100 directories
-def get_directory_structure_cached(rootdir):
-    with cache_lock:
-        return get_directory_structure(rootdir)
-
 def get_directory_size(path):
-    def folder_size(sub_path):
-        size = 0
-        try:
-            with os.scandir(sub_path) as entries:
-                for entry in entries:
-                    try:
-                        if entry.is_file():
-                            size += entry.stat().st_size
-                        elif entry.is_dir():
-                            size += folder_size(entry.path)  # Recursive call
-                    except (FileNotFoundError, PermissionError) as e:
-                        logging.warning(f"Skipping file or directory: {entry.path} ({e})")
-        except (FileNotFoundError, PermissionError) as e:
-            logging.warning(f"Skipping directory: {sub_path} ({e})")
-        return size
-
-    if not os.path.exists(path):
-        logging.warning(f"Path does not exist: {path}")
-        return 0
-
-    return folder_size(path)
-
+    """Get directory size using native du command"""
+    try:
+        result = subprocess.run(['du', '-sb', path], capture_output=True, text=True)
+        if result.returncode == 0:
+            return int(result.stdout.split()[0])
+    except Exception as e:
+        logging.warning(f"Error getting size for {path}: {e}")
+    return 0
 
 def scale_size(size_bytes):
     if size_bytes < 1024:
@@ -68,50 +49,84 @@ def scale_size(size_bytes):
     else:
         return f"{size_bytes / 1024**4:.2f} TB"
 
+def get_directory_structure(rootdir, page=1, sort_by='name', order='asc'):
+    """Get directory structure using native ls command with pagination"""
+    try:
+        # Use ls -la to get detailed listing
+        result = subprocess.run(['ls', '-la', rootdir], capture_output=True, text=True)
+        if result.returncode != 0:
+            return {}, 0
 
-def get_directory_structure(rootdir):
-    entries = {}
-    for name in sorted(os.listdir(rootdir)):
-        full_path = os.path.join(rootdir, name)
-        if os.path.isdir(full_path):
-            size_bytes = get_directory_size(full_path)
-            is_directory = True
-        else:
-            size_bytes = os.path.getsize(full_path)
-            is_directory = False
-        size = scale_size(size_bytes)
-        mtime = os.path.getmtime(full_path)
-        formatted_mtime = time.strftime(
-            '%m/%d/%Y %I:%M %p', time.localtime(mtime))
-        entries[name] = {
-            'is_directory': is_directory,
-            'size': size,
-            'size_bytes': size_bytes,
-            'last_modified': formatted_mtime
-        }
-    return entries
+        # Skip the first line (total) and process entries
+        lines = result.stdout.strip().split('\n')[1:]
+        entries = {}
+        
+        for line in lines:
+            parts = line.split()
+            if len(parts) < 9:  # Skip invalid lines
+                continue
+                
+            name = ' '.join(parts[8:])  # Handle filenames with spaces
+            if name in ['.', '..']:
+                continue
+                
+            full_path = os.path.join(rootdir, name)
+            is_directory = line.startswith('d')
+            
+            # Get size only if needed (for sorting by size)
+            size_bytes = 0
+            if sort_by == 'size':
+                if is_directory:
+                    size_bytes = get_directory_size(full_path)
+                else:
+                    size_bytes = int(parts[4])
+            
+            # Get modification time
+            mtime = os.path.getmtime(full_path)
+            formatted_mtime = time.strftime('%m/%d/%Y %I:%M %p', time.localtime(mtime))
+            
+            entries[name] = {
+                'is_directory': is_directory,
+                'size': scale_size(size_bytes) if size_bytes else '...',
+                'size_bytes': size_bytes,
+                'last_modified': formatted_mtime
+            }
 
+        # Sort entries
+        sorted_items = sorted(entries.items(), 
+                            key=lambda x: x[1]['size_bytes'] if sort_by == 'size' 
+                                        else x[1]['last_modified'] if sort_by == 'last_modified'
+                                        else x[0].lower(),
+                            reverse=(order == 'desc'))
+        
+        # Calculate pagination
+        total_items = len(sorted_items)
+        total_pages = math.ceil(total_items / PAGE_SIZE)
+        start_idx = (page - 1) * PAGE_SIZE
+        end_idx = start_idx + PAGE_SIZE
+        
+        # Return paginated results
+        paginated_entries = dict(sorted_items[start_idx:end_idx])
+        return paginated_entries, total_pages
+
+    except Exception as e:
+        logging.error(f"Error in get_directory_structure: {e}")
+        return {}, 0
 
 def search_files(directory, search_query):
-    """
-    Search recursively for files and directories that match the search_query within 'directory'.
-    """
-    matches = []
-    for path, dirs, files in os.walk(directory):
-        for dir_name in dirs:
-            if search_query.lower() in dir_name.lower():
-                full_path = os.path.join(path, dir_name)
-                matches.append(full_path)
-        for file_name in files:
-            if search_query.lower() in file_name.lower():
-                full_path = os.path.join(path, file_name)
-                matches.append(full_path)
-    return matches
-
+    """Search files using native find command"""
+    try:
+        result = subprocess.run(['find', directory, '-iname', f'*{search_query}*'], 
+                              capture_output=True, text=True)
+        if result.returncode == 0:
+            return result.stdout.strip().split('\n')
+    except Exception as e:
+        logging.error(f"Error in search_files: {e}")
+    return []
 
 @app.route('/search/<search_query>')
 def search(search_query):
-    # Retrieve sort parameters from the URL query string, default to 'name' and 'asc'
+    page = int(request.args.get('page', 1))
     sort_by = request.args.get('sort', 'name')
     order = request.args.get('order', 'asc')
 
@@ -125,62 +140,54 @@ def search(search_query):
         'parent_directory': os.path.dirname(path)
     } for path in search_results]
 
-    # Sorting function using lambda based on sort_by and order
+    # Sort results
     search_results.sort(key=lambda x: x[sort_by], reverse=(order == 'desc'))
 
-    results_count = len(search_results)  # Calculate the number of results
-    return render_template('search_results.html', search_query=search_query, search_results=search_results, results_count=results_count, base_directory=base_directory, sort_by=sort_by, order=order)
+    # Paginate results
+    total_items = len(search_results)
+    total_pages = math.ceil(total_items / PAGE_SIZE)
+    start_idx = (page - 1) * PAGE_SIZE
+    end_idx = start_idx + PAGE_SIZE
+    paginated_results = search_results[start_idx:end_idx]
 
+    return render_template('search_results.html', 
+                         search_query=search_query,
+                         search_results=paginated_results,
+                         results_count=total_items,
+                         base_directory=base_directory,
+                         sort_by=sort_by,
+                         order=order,
+                         current_page=page,
+                         total_pages=total_pages)
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>', methods=['GET'])
 def index(path):
-    current_directory = os.path.join(
-        base_directory, path) if path else base_directory
+    current_directory = os.path.join(base_directory, path) if path else base_directory
     parent_directory = os.path.dirname(current_directory) if current_directory != base_directory else None
-
     is_base_directory = (current_directory == base_directory)
-    print(current_directory, is_base_directory)
 
-    # Retrieve sorting parameters with defaults set to sort by type descending
+    # Get pagination and sorting parameters
+    page = int(request.args.get('page', 1))
     sort_by = request.args.get('sort', 'type_sort')
     order = request.args.get('order', 'desc')
 
-    # Pre-fetch parent directory in the background (if it exists)
-    if parent_directory and not is_base_directory:
-        executor.submit(get_directory_structure_cached, parent_directory)
+    # Get directory structure with pagination
+    directory_structure, total_pages = get_directory_structure(
+        current_directory, 
+        page=page,
+        sort_by=sort_by,
+        order=order
+    )
 
-    # Pre-fetch subdirectories
-    for entry in os.scandir(current_directory):
-        if entry.is_dir():
-            executor.submit(get_directory_structure_cached, entry.path)
-
-
-    directory_structure = get_directory_structure_cached(current_directory)
-
-    # Define the sorting key based on the parameter
-    def sort_key(item):
-        if sort_by == 'size':
-            return item[1]['size_bytes']
-        elif sort_by == 'last_modified':
-            return item[1]['last_modified']
-        elif sort_by == 'name':
-            return item[0]
-        elif sort_by == 'type_sort':
-            # Directories first if descending
-            return item[1]['is_directory']
-        else:
-            # Default to sorting by name if unrecognized sort type
-            return item[0]
-
-    reverse_order = (order == 'desc')
-    sorted_directory_structure = dict(
-        sorted(directory_structure.items(), key=sort_key, reverse=reverse_order))
-
-    return render_template('index.html', directory_structure=sorted_directory_structure,
-                           root_directory=current_directory, is_base_directory=is_base_directory,
-                           sort_by=sort_by, order=order)
-
+    return render_template('index.html',
+                         directory_structure=directory_structure,
+                         root_directory=current_directory,
+                         is_base_directory=is_base_directory,
+                         sort_by=sort_by,
+                         order=order,
+                         current_page=page,
+                         total_pages=total_pages)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5167, debug=True)
