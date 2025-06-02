@@ -27,6 +27,12 @@
             const separator = currentUrl.includes('?') ? '&' : '?';
             window.location.href = currentUrl + separator + 'rescan=' + new Date().getTime();
         }
+
+        function changePage(page) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('page', page);
+            window.location.href = url.toString();
+        }
     </script>
 </head>
 
@@ -69,6 +75,19 @@
         </tr>
         {% endfor %}
     </table>
+
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if current_page > 1 %}
+        <button onclick="changePage('{{ current_page - 1 }}')">Previous</button>
+        {% endif %}
+
+        <span>Page {{ current_page }} of {{ total_pages }}</span>
+
+        {% if current_page < total_pages %} <button onclick="changePage('{{ current_page + 1 }}')">Next</button>
+            {% endif %}
+    </div>
+    {% endif %}
     {% endif %}
 </body>
 

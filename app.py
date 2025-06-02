@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 import threading
 import logging
 import math
+from functools import lru_cache
 
 app = Flask(__name__)
 # example gui https://alchemist.cyou
@@ -24,8 +25,33 @@ app = Flask(__name__)
 base_directory = '/data'
 PAGE_SIZE = 50  # Number of items per page
 
+# Directories to exclude from caching
+EXCLUDED_DIRS = {
+    '/proc',
+    '/sys',
+    '/dev',
+    '/run',
+    '/var/run',
+    '/tmp',
+    '/var/tmp'
+}
+
 executor = ThreadPoolExecutor(max_workers=4)
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Cache for directory structures
+directory_cache = {}
+cache_lock = threading.Lock()
+
+def should_cache_directory(path):
+    """Check if a directory should be cached"""
+    # Don't cache system directories
+    if any(path.startswith(excluded) for excluded in EXCLUDED_DIRS):
+        return False
+    # Don't cache directories outside the base directory
+    if not path.startswith(base_directory):
+        return False
+    return True
 
 def get_directory_size(path):
     """Get directory size using native du command"""
@@ -49,12 +75,29 @@ def scale_size(size_bytes):
     else:
         return f"{size_bytes / 1024**4:.2f} TB"
 
-def get_directory_structure(rootdir, page=1, sort_by='name', order='asc'):
-    """Get directory structure using native ls command with pagination"""
+def get_directory_structure(rootdir, page=1, sort_by='name', order='asc', use_cache=True):
+    """Get directory structure using native ls command with pagination and caching"""
     try:
-        # Use ls -la to get detailed listing
-        result = subprocess.run(['ls', '-la', rootdir], capture_output=True, text=True)
+        # Check if we should cache this directory
+        if use_cache and not should_cache_directory(rootdir):
+            use_cache = False
+
+        # Check cache first if enabled
+        if use_cache:
+            with cache_lock:
+                if rootdir in directory_cache:
+                    entries, total_pages = directory_cache[rootdir]
+                    # Apply pagination to cached results
+                    start_idx = (page - 1) * PAGE_SIZE
+                    end_idx = start_idx + PAGE_SIZE
+                    paginated_entries = dict(list(entries.items())[start_idx:end_idx])
+                    return paginated_entries, total_pages
+
+        # Use ls -la to get detailed listing, following symlinks
+        result = subprocess.run(['ls', '-la', '--time-style=full-iso', rootdir], 
+                              capture_output=True, text=True, check=False)
         if result.returncode != 0:
+            logging.warning(f"Error listing directory {rootdir}: {result.stderr}")
             return {}, 0
 
         # Skip the first line (total) and process entries
@@ -62,35 +105,50 @@ def get_directory_structure(rootdir, page=1, sort_by='name', order='asc'):
         entries = {}
         
         for line in lines:
-            parts = line.split()
-            if len(parts) < 9:  # Skip invalid lines
-                continue
+            try:
+                parts = line.split()
+                if len(parts) < 9:  # Skip invalid lines
+                    continue
+                    
+                name = ' '.join(parts[8:])  # Handle filenames with spaces
+                if name in ['.', '..']:
+                    continue
+                    
+                full_path = os.path.join(rootdir, name)
                 
-            name = ' '.join(parts[8:])  # Handle filenames with spaces
-            if name in ['.', '..']:
-                continue
+                # Skip if path doesn't exist (broken symlink or deleted file)
+                if not os.path.exists(full_path):
+                    continue
                 
-            full_path = os.path.join(rootdir, name)
-            is_directory = line.startswith('d')
-            
-            # Get size only if needed (for sorting by size)
-            size_bytes = 0
-            if sort_by == 'size':
-                if is_directory:
-                    size_bytes = get_directory_size(full_path)
-                else:
-                    size_bytes = int(parts[4])
-            
-            # Get modification time
-            mtime = os.path.getmtime(full_path)
-            formatted_mtime = time.strftime('%m/%d/%Y %I:%M %p', time.localtime(mtime))
-            
-            entries[name] = {
-                'is_directory': is_directory,
-                'size': scale_size(size_bytes) if size_bytes else '...',
-                'size_bytes': size_bytes,
-                'last_modified': formatted_mtime
-            }
+                is_directory = line.startswith('d')
+                
+                # Get size for all entries
+                size_bytes = 0
+                try:
+                    if is_directory:
+                        size_bytes = get_directory_size(full_path)
+                    else:
+                        size_bytes = int(parts[4])
+                except (ValueError, OSError) as e:
+                    logging.warning(f"Error getting size for {full_path}: {e}")
+                
+                # Get modification time
+                try:
+                    mtime = os.path.getmtime(full_path)
+                    formatted_mtime = time.strftime('%m/%d/%Y %I:%M %p', time.localtime(mtime))
+                except OSError as e:
+                    logging.warning(f"Error getting mtime for {full_path}: {e}")
+                    formatted_mtime = "Unknown"
+                
+                entries[name] = {
+                    'is_directory': is_directory,
+                    'size': scale_size(size_bytes) if size_bytes else '...',
+                    'size_bytes': size_bytes,
+                    'last_modified': formatted_mtime
+                }
+            except Exception as e:
+                logging.warning(f"Error processing entry in {rootdir}: {e}")
+                continue
 
         # Sort entries
         sorted_items = sorted(entries.items(), 
@@ -105,6 +163,24 @@ def get_directory_structure(rootdir, page=1, sort_by='name', order='asc'):
         start_idx = (page - 1) * PAGE_SIZE
         end_idx = start_idx + PAGE_SIZE
         
+        # Cache the full directory structure
+        if use_cache:
+            with cache_lock:
+                directory_cache[rootdir] = (dict(sorted_items), total_pages)
+                
+                # Cache parent directory if it exists
+                parent_dir = os.path.dirname(rootdir)
+                if parent_dir and parent_dir != rootdir and should_cache_directory(parent_dir):
+                    if parent_dir not in directory_cache:
+                        executor.submit(get_directory_structure, parent_dir, 1, sort_by, order)
+                
+                # Cache immediate children directories
+                for name, details in entries.items():
+                    if details['is_directory']:
+                        child_path = os.path.join(rootdir, name)
+                        if child_path not in directory_cache and should_cache_directory(child_path):
+                            executor.submit(get_directory_structure, child_path, 1, sort_by, order)
+        
         # Return paginated results
         paginated_entries = dict(sorted_items[start_idx:end_idx])
         return paginated_entries, total_pages
@@ -112,6 +188,11 @@ def get_directory_structure(rootdir, page=1, sort_by='name', order='asc'):
     except Exception as e:
         logging.error(f"Error in get_directory_structure: {e}")
         return {}, 0
+
+def clear_directory_cache():
+    """Clear the directory cache"""
+    with cache_lock:
+        directory_cache.clear()
 
 def search_files(directory, search_query):
     """Search files using native find command"""
@@ -171,6 +252,10 @@ def index(path):
     page = int(request.args.get('page', 1))
     sort_by = request.args.get('sort', 'type_sort')
     order = request.args.get('order', 'desc')
+
+    # Clear cache if rescan is requested
+    if request.args.get('rescan'):
+        clear_directory_cache()
 
     # Get directory structure with pagination
     directory_structure, total_pages = get_directory_structure(

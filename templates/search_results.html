@@ -6,6 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Search Results - Directory Structure Viewer</title>
     <link rel="stylesheet" href="/static/style.css">
+    <script>
+        function changePage(page) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('page', page);
+            window.location.href = url.toString();
+        }
+    </script>
 </head>
 
 <body>
@@ -49,6 +56,19 @@
         </tr>
         {% endfor %}
     </table>
+
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if current_page > 1 %}
+        <button onclick="changePage('{{ current_page - 1 }}')">Previous</button>
+        {% endif %}
+
+        <span>Page {{ current_page }} of {{ total_pages }}</span>
+
+        {% if current_page < total_pages %} <button onclick="changePage('{{ current_page + 1 }}')">Next</button>
+            {% endif %}
+    </div>
+    {% endif %}
 
     {% else %}
     <p>No results found.</p>
