@@ -57,6 +57,16 @@ header button:hover {
   background-color: #555;
 }
 
+/* Counter styling */
+.counter {
+  width: 90%;
+  margin: 0 auto;
+  padding: 10px;
+  color: #ccc;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
 /* Table styling */
 table {
   width: 90%;

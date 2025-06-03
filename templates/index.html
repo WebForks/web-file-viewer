@@ -52,6 +52,16 @@
     </header>
 
     {% if directory_structure %}
+    {% set dir_count = namespace(count=0) %}
+    {% set file_count = namespace(count=0) %}
+    {% for item, details in directory_structure.items() %}
+    {% if details.is_directory %}
+    {% set dir_count.count = dir_count.count + 1 %}
+    {% else %}
+    {% set file_count.count = file_count.count + 1 %}
+    {% endif %}
+    {% endfor %}
+    <div class="counter">{{ dir_count.count }} directories & {{ file_count.count }} files</div>
     <table>
         <th><a
                 href="?sort=type_sort&order={{ 'asc' if request.args.get('sort') == 'type_sort' and request.args.get('order') == 'desc' else 'desc' }}">Type</a>
