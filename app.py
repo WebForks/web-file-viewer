@@ -138,24 +138,38 @@ def get_directory_structure(rootdir, page=1, sort_by='name', order='asc', use_ca
                     formatted_mtime = time.strftime('%m/%d/%Y %I:%M %p', time.localtime(mtime))
                 except OSError as e:
                     logging.warning(f"Error getting mtime for {full_path}: {e}")
+                    mtime = 0
                     formatted_mtime = "Unknown"
                 
                 entries[name] = {
                     'is_directory': is_directory,
                     'size': scale_size(size_bytes) if size_bytes else '...',
                     'size_bytes': size_bytes,
-                    'last_modified': formatted_mtime
+                    'last_modified': formatted_mtime,
+                    'last_modified_ts': mtime
                 }
             except Exception as e:
                 logging.warning(f"Error processing entry in {rootdir}: {e}")
                 continue
 
         # Sort entries
-        sorted_items = sorted(entries.items(), 
-                            key=lambda x: x[1]['size_bytes'] if sort_by == 'size' 
-                                        else x[1]['last_modified'] if sort_by == 'last_modified'
-                                        else x[0].lower(),
-                            reverse=(order == 'desc'))
+        def sort_key(item):
+            name, details = item
+            if sort_by == 'size':
+                return details['size_bytes']
+            elif sort_by == 'last_modified':
+                return details['last_modified_ts']
+            elif sort_by == 'type_sort':
+                return (0 if details['is_directory'] else 1, name.lower())
+            else:
+                return name.lower()
+
+        reverse = (order == 'desc')
+        if sort_by == 'type_sort':
+            # Descending should show directories first
+            reverse = (order == 'asc')
+
+        sorted_items = sorted(entries.items(), key=sort_key, reverse=reverse)
         
         # Calculate pagination
         total_items = len(sorted_items)
@@ -211,18 +225,33 @@ def search(search_query):
     sort_by = request.args.get('sort', 'name')
     order = request.args.get('order', 'asc')
 
-    search_results = search_files(base_directory, search_query)
-    search_results = [{
-        'name': os.path.basename(path),
-        'path': path,
-        'type': 'Directory' if os.path.isdir(path) else 'File',
-        'size': scale_size(os.path.getsize(path)),
-        'last_modified': time.strftime('%m/%d/%Y %I:%M %p', time.localtime(os.path.getmtime(path))),
-        'parent_directory': os.path.dirname(path)
-    } for path in search_results]
+    search_results_raw = search_files(base_directory, search_query)
 
-    # Sort results
-    search_results.sort(key=lambda x: x[sort_by], reverse=(order == 'desc'))
+    search_results = []
+    for path in search_results_raw:
+        is_dir = os.path.isdir(path)
+        size_bytes = get_directory_size(path) if is_dir else os.path.getsize(path)
+        search_results.append({
+            'name': os.path.basename(path),
+            'path': path,
+            'type': 'Directory' if is_dir else 'File',
+            'size': scale_size(size_bytes),
+            'size_bytes': size_bytes,
+            'last_modified': time.strftime('%m/%d/%Y %I:%M %p', time.localtime(os.path.getmtime(path))),
+            'last_modified_ts': os.path.getmtime(path),
+            'parent_directory': os.path.dirname(path)
+        })
+
+    # Sort results with proper numeric handling
+    def sort_key(item):
+        if sort_by == 'size':
+            return item['size_bytes']
+        elif sort_by == 'last_modified':
+            return item['last_modified_ts']
+        else:
+            return item[sort_by].lower() if isinstance(item[sort_by], str) else item[sort_by]
+
+    search_results.sort(key=sort_key, reverse=(order == 'desc'))
 
     # Paginate results
     total_items = len(search_results)
