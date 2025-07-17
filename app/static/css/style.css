@@ -1,0 +1,154 @@
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #2c2c2c;
+  color: #f8f8f2;
+  margin: 0;
+  padding: 20px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: #333;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.navigation-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#back-button,
+#rescan-button {
+  background-color: #444;
+  color: #f8f8f2;
+  border: 1px solid #555;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#back-button:hover,
+#rescan-button:hover {
+  background-color: #555;
+}
+
+#breadcrumb {
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 1.1em;
+  color: #a6e22e;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+#breadcrumb a {
+  color: #a6e22e;
+  text-decoration: none;
+}
+
+#breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+#breadcrumb .separator {
+  margin: 0 5px;
+}
+
+.search-container {
+  display: flex;
+}
+
+#search-input {
+  font-family: "Consolas", "Courier New", monospace;
+  background-color: #444;
+  color: #f8f8f2;
+  border: 1px solid #555;
+  padding: 8px;
+  border-radius: 4px;
+  width: 300px;
+}
+
+#search-button,
+#clear-search-button {
+  background-color: #ae81ff;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+#search-button:hover,
+#clear-search-button:hover {
+  background-color: #9768d1;
+}
+
+#clear-search-button {
+  background-color: #f92672;
+}
+
+#clear-search-button:hover {
+  background-color: #d81b60;
+}
+
+#file-list {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#file-list th,
+#file-list td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #444;
+}
+
+#file-list th {
+  background-color: #444;
+  cursor: pointer;
+}
+
+#file-list th:hover {
+  background-color: #555;
+}
+
+#file-list tbody tr:hover {
+  background-color: #3e3e3e;
+}
+
+#file-list .file-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+}
+
+#file-list a {
+  color: #66d9ef;
+  text-decoration: none;
+}
+
+#file-list a:hover {
+  text-decoration: underline;
+}
+
+.file-path {
+  color: #75715e;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2px;
+  display: block;
+}

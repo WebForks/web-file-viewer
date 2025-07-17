@@ -1,8 +1,0 @@
-services:
-  web:
-    image: ankhussy/webfile-viewer:latest
-    build: .
-    ports:
-      - "5167:5167"
-    volumes:
-      - DIRECTORY:/data

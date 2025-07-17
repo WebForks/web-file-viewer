@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Explorer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="navigation-controls">
+                <div id="breadcrumb"></div>
+                <button id="back-button" title="Go back to parent directory">⬅️ Back</button>
+                <button id="rescan-button" title="Refresh current directory">🔄 Rescan</button>
+            </div>
+            <div class="search-container">
+                <input type="text" id="search-input" placeholder="Search files and folders...">
+                <button id="search-button" onclick="performSearch()">Search</button>
+                <button id="clear-search-button" onclick="clearSearch()">Clear</button>
+            </div>
+        </div>
+        <table id="file-list">
+            <thead>
+                <tr>
+                    <th data-sort="name">Name</th>
+                    <th data-sort="size">Size</th>
+                    <th data-sort="type">Type</th>
+                    <th data-sort="last_modified">Last Modified</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- File and folder rows will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>
